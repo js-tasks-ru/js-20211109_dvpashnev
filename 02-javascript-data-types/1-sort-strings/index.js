@@ -23,13 +23,15 @@ export function sortStrings(arr, param = 'asc') {
 }
 
 /**
- * compare - compares two string by criteria "asc" or "desc"
+ * compare - compares two normalizes string by criteria "asc" or "desc"
  * @param {string} a - string
  * @param {string} b - string
  * @param {string} [param="asc"] param - the sorting type "asc" or "desc"
- * @returns {number}
+ * @returns {number} - if a > b => 1, if a < b => -1, if a = b => 0(-0)
  */
 function compare(a, b, param = 'asc') {
-  const compareResult = b.localeCompare(a,['ru-RU-u-kf-upper', 'en-US-u-kf-upper']);
+  const compareResult = b.normalize()
+    .localeCompare(a.normalize(),
+      ['ru-RU-u-kf-upper', 'en-US-u-kf-upper']);
   return param === 'asc' ? compareResult : -compareResult;
 }
