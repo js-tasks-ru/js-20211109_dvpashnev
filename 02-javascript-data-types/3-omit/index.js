@@ -5,9 +5,9 @@
  * @returns {object} - returns the new object
  */
 export const omit = (obj, ...fields) => {
-  let result = {};
+  const result = {};
 
-  for (let [key, value] of Object.entries(obj)) {
+  for (const [key, value] of Object.entries(obj)) {
     if (!fields.includes(key)) {
       result[key] = value;
     }

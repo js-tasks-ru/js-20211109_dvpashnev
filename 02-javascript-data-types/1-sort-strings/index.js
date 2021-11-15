@@ -5,20 +5,8 @@
  * @returns {string[]}
  */
 export function sortStrings(arr, param = 'asc') {
-  let result = [...arr];
-  const length = arr.length;
-  for (let i = 0; i < length - 1; i++) {
-    for (let j = 0; j < length - 1 - i; j++) {
-      const current = result[j];
-      const next = result[j + 1];
-      if (compare(current, next, param) < 0) {
-        const t = result[j + 1];
-        result[j + 1] = result[j];
-        result[j] = t;
-      }
-    }
-  }
-
+  const result = [...arr];
+  result.sort(param === 'asc' ? compareAsc : compareDesc);
   return result;
 }
 
@@ -26,12 +14,15 @@ export function sortStrings(arr, param = 'asc') {
  * compare - compares two normalizes string by criteria "asc" or "desc"
  * @param {string} a - string
  * @param {string} b - string
- * @param {string} [param="asc"] param - the sorting type "asc" or "desc"
+ * @param {string} b - string
  * @returns {number} - if a > b => 1, if a < b => -1, if a = b => 0(-0)
  */
-function compare(a, b, param = 'asc') {
-  const compareResult = b.normalize()
-    .localeCompare(a.normalize(),
-      ['ru-RU-u-kf-upper', 'en-US-u-kf-upper']);
-  return param === 'asc' ? compareResult : -compareResult;
+function compareAsc(a, b) {
+  return a.normalize()
+    .localeCompare(b.normalize(),
+      ['ru', 'en'], {caseFirst: 'upper'});
+}
+
+function compareDesc(a, b) {
+  return -compareAsc(a, b);
 }
