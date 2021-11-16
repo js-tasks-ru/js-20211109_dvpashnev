@@ -6,7 +6,11 @@
  */
 export function sortStrings(arr, param = 'asc') {
   const result = [...arr];
-  result.sort(param === 'asc' ? compareAsc : compareDesc);
+  const directions = {
+    asc: 1,
+    desc: -1
+  };
+  result.sort((a, b) => directions[param] * compare(a, b))
   return result;
 }
 
@@ -17,12 +21,8 @@ export function sortStrings(arr, param = 'asc') {
  * @param {string} b - string
  * @returns {number} - if a > b => 1, if a < b => -1, if a = b => 0(-0)
  */
-function compareAsc(a, b) {
+function compare(a, b) {
   return a.normalize()
     .localeCompare(b.normalize(),
       ['ru', 'en'], {caseFirst: 'upper'});
-}
-
-function compareDesc(a, b) {
-  return -compareAsc(a, b);
 }
