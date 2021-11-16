@@ -6,11 +6,12 @@
 export function createGetter(path) {
   return function (obj) {
     const parts = path.split('.');
+    let copy = {...obj};
     let resultProp;
     for (let prop of parts) {
-      if (obj[prop]) {
-        resultProp = obj[prop];
-        obj = obj[prop];
+      if (copy[prop]) {
+        resultProp = copy[prop];
+        copy = copy[prop];
       } else {
         resultProp = undefined;
         break;
