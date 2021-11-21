@@ -1,14 +1,18 @@
 export default class ColumnChart {
   chartHeight = 50;
 
-  constructor(obj = {}) {
-    ({
-      data: this.data = [],
-      label: this.label = '',
-      link: this.link = '',
-      value: this.value = 0,
-      formatHeading: this.formatHeading = null
-    } = obj);
+  constructor({
+    data = [],
+    label = '',
+    link = '',
+    value = 0,
+    formatHeading = data => data
+  } = {}) {
+    this.data = data;
+    this.label = label;
+    this.link = link;
+    this.value = value;
+    this.formatHeading = formatHeading;
 
     this.render();
     this.initEventListeners();
@@ -23,7 +27,7 @@ export default class ColumnChart {
         </div>
         <div class="column-chart__container">
           <div data-element="header" class="column-chart__header">
-              ${this.formatHeading !== null ? this.formatHeading(this.value) : this.value}
+              ${this.formatHeading(this.value)}
           </div>
           <div data-element="body" class="column-chart__chart">
               ${this.renderColumns()}
@@ -49,12 +53,9 @@ export default class ColumnChart {
   }
 
   renderColumns() {
-    let columns = ``;
-
-    for (const {percent, value} of this.getColumnProps(this.data)) {
-      columns += `<div style="--value: ${value}" data-tooltip="${percent}"></div>`;
-    }
-    return columns;
+    return this.getColumnProps(this.data)
+      .map(({percent, value}) => `<div style="--value: ${value}" data-tooltip="${percent}"></div>`)
+      .join('');
   }
 
   update(data) {
