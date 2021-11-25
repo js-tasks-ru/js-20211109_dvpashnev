@@ -3,7 +3,7 @@ export default class NotificationMessage {
   element = NotificationMessage.element;
 
   constructor(
-    note = 'Hello World',
+    note = '',
     {
       duration = 200,
       type = 'success'
@@ -13,7 +13,6 @@ export default class NotificationMessage {
     this.type = type;
 
     this.render();
-    this.initEventListeners();
   }
 
   get template() {
@@ -47,10 +46,6 @@ export default class NotificationMessage {
   show(targetElement = document.body) {
     this.render();
     targetElement.append(this.element);
-  }
-
-  initEventListeners() {
-
   }
 
   remove() {

@@ -7,7 +7,6 @@ export default class SortableTable {
     this.data = data;
 
     this.render();
-    this.initEventListeners();
   }
 
   get template() {
@@ -91,10 +90,6 @@ export default class SortableTable {
     this.data = sortObjects(this.data, fieldValue, fieldConfig.sortType, orderValue);
     this.subElements.header.innerHTML = this.getTableHeader(fieldValue, orderValue);
     this.subElements.body.innerHTML = this.getTableRows();
-  }
-
-  initEventListeners() {
-
   }
 
   remove() {
