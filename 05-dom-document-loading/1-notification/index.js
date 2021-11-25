@@ -32,7 +32,7 @@ export default class NotificationMessage {
 
   render() {
     if (NotificationMessage.element) {
-      this.destroy();
+      NotificationMessage.element.remove();
     }
     const element = document.createElement('div');
 
