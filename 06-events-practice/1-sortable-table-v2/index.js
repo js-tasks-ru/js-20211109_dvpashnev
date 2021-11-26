@@ -18,9 +18,8 @@ export default class SortableTable {
     this.eventFunctions = [];
 
     this.render();
-    //this.initEventListeners();
-    this.sort(this.sorted.id, this.sorted.order);
 
+    this.sort(this.sorted.id, this.sorted.order);
   }
 
   get template() {
@@ -31,32 +30,37 @@ export default class SortableTable {
           ${this.getTableHeader()}
         </div>
         <div data-element="body" class="sortable-table__body">
-          ${this.getTableRows()}
+          ${this.tableRows}
         </div>
       </div>
     </div>`;
   }
 
-  getTableHeader(fieldValue, order) {
-    console.log(fieldValue);
+  getTableHeader(fieldValue = this.sorted.id, orderValue = this.sorted.order) {
     return this.headerConfig
-      .map(({id, title, sortable}) =>{
-          console.log(id === fieldValue);
-          return `<div class="sortable-table__cell"
+      .map(({id, title, sortable}) => {
+        const isSortedField = id === fieldValue;
+        return `<div class="sortable-table__cell"
           data-id="${id}"
           data-sortable="${sortable}"
-          data-order="${id === fieldValue ? order : ''}">
-            <span>${title}</span>
-            <span style="display: none" data-id="${id}" data-f="${fieldValue}"></span>
+          ${isSortedField ? 'data-order="' + orderValue + '"' : ''}>
+          <span>${title}</span>
+          ${isSortedField ? this.sortArrow : ''}
         </div>`;
       }
-        )
+      )
       .join('');
   }
 
-  getTableRows() {
+  get sortArrow() {
+    return `<span data-element="arrow" class="sortable-table__sort-arrow">
+                <span class="sort-arrow"></span>
+            </span>`;
+  }
+
+  get tableRows() {
     return this.data
-      .map((row) =>
+            .map((row) =>
         `<a href="/products/${row.id || '#'}" class="sortable-table__row">
           ${this.getFields(row)}
         </a>`)
@@ -100,35 +104,34 @@ export default class SortableTable {
   }
 
   initEventListeners() {
-    if (this.eventFunctions.length > 0) {
+    if (Object.entries(this.eventFunctions).length > 0) {
       this.destroyEventListeners();
     }
     const headers = this.element.querySelectorAll('[data-sortable="true"]');
     headers.forEach((elem) => {
-        const fieldValue = elem.dataset.id;
-        const orderValue = this.sorted.order === 'asc' ? 'desc' : 'asc';
-        console.log('onpointerdown set on ' + fieldValue);
+      const fieldValue = elem.dataset.id;
+      const orderValue = this.sorted.order === 'asc' ? 'desc' : 'asc';
 
-      this.eventFunctions[fieldValue] = () => {
-        console.log('onpointerdown dispatched on' + fieldValue);
-        this.sort(fieldValue, orderValue);
-      };
-
-        elem.addEventListener('pointerdown', this.eventFunctions[fieldValue]);
+      if (!this.eventFunctions[fieldValue + orderValue]) {
+        this.eventFunctions[fieldValue + orderValue] = () => {
+          this.sort(fieldValue, orderValue);
+        };
       }
-    );
+
+      elem.addEventListener('pointerdown', this.eventFunctions[fieldValue+orderValue]);
+    });
   }
 
   destroyEventListeners() {
-    const headers = this.element.querySelectorAll('[data-sortable="true"]');
-    headers.forEach((elem) => {
-      const fieldValue = elem.dataset.id;
+    if (this.element) {
+      const headers = this.element.querySelectorAll('[data-sortable="true"]');
+      headers.forEach((elem) => {
+        const fieldValue = elem.dataset.id;
+        elem.removeEventListener('pointerdown', this.eventFunctions[fieldValue]);
+      });
 
-      elem.addEventListener('pointerdown', this.eventFunctions[fieldValue]);
-      }
-    );
-
-    this.eventFunctions = [];
+      this.eventFunctions = {};
+    }
   }
 
   sort(fieldValue, orderValue) {
@@ -146,13 +149,20 @@ export default class SortableTable {
 
   sortOnClient() {
     const fieldValue = this.sorted.id;
-    console.log(fieldValue);
     const orderValue = this.sorted.order;
-    console.log('sortOnClient by' + fieldValue + ' for ' + orderValue);
     const fieldConfig = this.headerConfig.find(field => field.id === fieldValue);
     this.data = sortObjects(this.data, fieldValue, fieldConfig.sortType, orderValue);
-    this.subElements.header.innerHTML = this.getTableHeader(fieldValue, orderValue);
-    this.subElements.body.innerHTML = this.getTableRows();
+    const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
+    if (oldSortedField !== null) {
+      const arrowElement = oldSortedField.lastElementChild;
+      delete oldSortedField.dataset.order;
+      const newSortedField = this.subElements.header.querySelector(`[data-id="${fieldValue}"]`);
+      newSortedField.dataset.order = orderValue;
+      newSortedField.append(arrowElement.cloneNode(true));
+      arrowElement.remove();
+    }
+
+    this.subElements.body.innerHTML = this.tableRows;
   }
 
   remove() {
@@ -162,7 +172,7 @@ export default class SortableTable {
   }
 
   destroy() {
-    //this.destroyEventListeners();
+    this.destroyEventListeners();
     this.remove();
     this.element = null;
   }
