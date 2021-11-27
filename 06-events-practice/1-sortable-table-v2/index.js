@@ -60,11 +60,10 @@ export default class SortableTable {
 
   get tableRows() {
     return this.data
-            .map((row) =>
-        `<a href="/products/${row.id || '#'}" class="sortable-table__row">
-          ${this.getFields(row)}
-        </a>`)
-      .join('');
+            .map((row) => `<a href="/products/${row.id || '#'}" class="sortable-table__row">
+                                ${this.getFields(row)}
+                              </a>`)
+            .join('');
 
   }
 
@@ -104,9 +103,6 @@ export default class SortableTable {
   }
 
   initEventListeners() {
-    if (Object.entries(this.eventFunctions).length > 0) {
-      this.destroyEventListeners();
-    }
     const headers = this.element.querySelectorAll('[data-sortable="true"]');
     headers.forEach((elem) => {
       const fieldValue = elem.dataset.id;
@@ -118,7 +114,11 @@ export default class SortableTable {
         };
       }
 
-      elem.addEventListener('pointerdown', this.eventFunctions[fieldValue+orderValue]);
+      if (this.eventFunctions[fieldValue + this.sorted.order]) {
+        elem.removeEventListener('pointerdown', this.eventFunctions[fieldValue + this.sorted.order]);
+      }
+
+      elem.addEventListener('pointerdown', this.eventFunctions[fieldValue + orderValue]);
     });
   }
 
@@ -158,8 +158,8 @@ export default class SortableTable {
       delete oldSortedField.dataset.order;
       const newSortedField = this.subElements.header.querySelector(`[data-id="${fieldValue}"]`);
       newSortedField.dataset.order = orderValue;
-      newSortedField.append(arrowElement.cloneNode(true));
       arrowElement.remove();
+      newSortedField.append(arrowElement);
     }
 
     this.subElements.body.innerHTML = this.tableRows;
