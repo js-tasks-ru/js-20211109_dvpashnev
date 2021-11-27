@@ -104,7 +104,6 @@ export default class DoubleSlider {
   }
 
   moveLeft(event) {
-    //console.log(event.target !== this.subElements.thumbLeft);
     if (event.target === this.subElements.thumbLeft) {
       const coordinates = this.subElements.inner.getBoundingClientRect();
       const progressWidth = coordinates.width;
@@ -148,10 +147,6 @@ export default class DoubleSlider {
     this.subElements.thumbRight.addEventListener('pointerdown', (event) => {
       this.rightPointerdown(event);
     });
-
-    //document.addEventListener('range-select', (event) => {
-      //alert('range-select was dispatched');
-    //});
   }
 
   remove() {
