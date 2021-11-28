@@ -19,21 +19,13 @@ export default class DoubleSlider {
     this.moveLeft = this.moveLeft.bind(this);
     this.moveRight = this.moveRight.bind(this);
 
-    this.rangeSelectEvent = new Event('range-select',
-      { bubbles: true,
-        detail: {
-          from: this.selected.from,
-          to: this.selected.to,
-        }
-      });
-
     this.render();
     this.initEventListeners();
   }
 
   get selectedPercent() {
     return {
-      from: +((this.selected.from / this.max) * 100).toFixed() - +((this.min / this.max) * 100).toFixed(),
+      from: +(((this.selected.from - +this.min) / (this.max - +this.min)) * 100).toFixed(),
       to: 100 - (this.selected.to / this.max * 100).toFixed()
     };
   }
@@ -78,64 +70,66 @@ export default class DoubleSlider {
   }
 
   leftPointerdown() {
+    this.element.removeEventListener('pointermove', this.moveRight);
     this.element.addEventListener('pointermove', this.moveLeft);
 
     this.element.addEventListener('pointerup', () => {
-      this.rangeSelectEvent.detail = {
-        from: +this.selected.from,
-        to: +this.selected.to
-      };
-      this.element.dispatchEvent(this.rangeSelectEvent);
+      this.element.dispatchEvent(new CustomEvent('range-select',
+        {
+          bubbles: true,
+          detail: {
+            from: +this.selected.from,
+            to: +this.selected.to,
+          }
+        }));
       this.element.removeEventListener('pointermove', this.moveLeft);
     });
   }
 
   rightPointerdown() {
+    this.element.removeEventListener('pointermove', this.moveLeft);
     this.element.addEventListener('pointermove', this.moveRight);
 
     this.element.addEventListener('pointerup', () => {
-      this.rangeSelectEvent.detail = {
-        from: +this.selected.from,
-        to: +this.selected.to
-      };
-      this.element.dispatchEvent(this.rangeSelectEvent);
+      this.element.dispatchEvent(new CustomEvent('range-select',
+        {
+          bubbles: true,
+          detail: {
+            from: +this.selected.from,
+            to: +this.selected.to,
+          }
+        }));
       this.element.removeEventListener('pointermove', this.moveRight);
     });
   }
 
   moveLeft(event) {
-    if (event.target === this.subElements.thumbLeft) {
-      const coordinates = this.subElements.inner.getBoundingClientRect();
-      const progressWidth = coordinates.width;
-      const nextLeft = coordinates.x ? event.clientX - coordinates.x : event.clientX;
+    const coordinates = this.subElements.inner.getBoundingClientRect();
+    const progressWidth = coordinates.width;
+    const nextLeft = coordinates.x ? event.clientX - coordinates.x : event.clientX;
 
-      if (nextLeft >= 0 && nextLeft <= progressWidth) {
-        const nextLeftPart = progressWidth !== 0 ? nextLeft / progressWidth : nextLeft;
-        const nextLeftInPercent = (nextLeftPart * 100).toFixed(10);
+    if (nextLeft >= 0 && nextLeft <= progressWidth) {
+      const nextLeftPart = progressWidth !== 0 ? nextLeft / progressWidth : nextLeft;
 
-        this.subElements.thumbLeft.style.left = nextLeftInPercent + '%';
-        this.subElements.progress.style.left = nextLeftInPercent + '%';
-        this.selected.from = (nextLeftPart * (this.max - this.min) + +this.min).toFixed();
-        this.subElements.from.innerHTML = this.formatValue((nextLeftPart * (this.max - this.min) + +this.min).toFixed());
-      }
+      this.selected.from = (nextLeftPart * (this.max - this.min) + +this.min).toFixed();
+      this.subElements.thumbLeft.style.left = this.selectedPercent.from + '%';
+      this.subElements.progress.style.left = this.selectedPercent.from + '%';
+      this.subElements.from.innerHTML = this.formatValue(this.selected.from);
     }
   }
 
   moveRight(event) {
-    if (event.target === this.subElements.thumbRight) {
-      const coordinates = this.subElements.inner.getBoundingClientRect();
-      const progressWidth = coordinates.width;
-      const nextLeft = coordinates.x ? event.clientX - coordinates.x : event.clientX;
+    const coordinates = this.subElements.inner.getBoundingClientRect();
+    const progressWidth = coordinates.width;
+    const nextLeft = coordinates.x ? event.clientX - coordinates.x : event.clientX;
 
-      if (nextLeft >= 0 && (nextLeft <= progressWidth || progressWidth === 0)) {
-        const nextLeftPart = progressWidth !== 0 ? nextLeft / progressWidth : nextLeft;
-        const nextLeftInPercent = (nextLeftPart * 100).toFixed(10);
+    if (nextLeft >= 0 && nextLeft <= progressWidth) {
+      const nextLeftPart = progressWidth !== 0 ? nextLeft / progressWidth : nextLeft;
 
-        this.subElements.thumbRight.style.left = nextLeftInPercent + '%';
-        this.subElements.progress.style.right = (100 - nextLeftInPercent) + '%';
-        this.selected.to = (nextLeftPart * this.max).toFixed();
-        this.subElements.to.innerHTML = this.formatValue((nextLeftPart * this.max).toFixed());
-      }
+      this.selected.to = (nextLeftPart * this.max).toFixed();
+      this.subElements.thumbRight.style.right = this.selectedPercent.to + '%';
+      this.subElements.progress.style.right = this.selectedPercent.to + '%';
+      this.subElements.to.innerHTML = this.formatValue(this.selected.to);
     }
   }
 
