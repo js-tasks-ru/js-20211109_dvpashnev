@@ -15,10 +15,8 @@ export default class SortableTable {
     this.sorted = sorted;
     this.isSortLocally = isSortLocally;
 
-    this.eventFunctions = [];
-
     this.render();
-
+    this.initEventListeners();
     this.sort(this.sorted.id, this.sorted.order);
   }
 
@@ -64,16 +62,13 @@ export default class SortableTable {
                                 ${this.getFields(row)}
                               </a>`)
             .join('');
-
   }
 
   getFields(row) {
     return this.headerConfig
       .map(field => {
-        if (field.id === 'images' && typeof field.template === 'function') {
-          return field.template(row.images);
-        } else if (field.id !== 'id') {
-          return `<div class="sortable-table__cell">${row[field.id]}</div>`;
+        if (field.id !== 'id') {
+          return field.template?.(row[[field.id]]) || `<div class="sortable-table__cell">${row[field.id]}</div>`;
         }
       })
       .join('');
@@ -103,34 +98,22 @@ export default class SortableTable {
   }
 
   initEventListeners() {
-    const headers = this.element.querySelectorAll('[data-sortable="true"]');
-    headers.forEach((elem) => {
-      const fieldValue = elem.dataset.id;
-      const orderValue = this.sorted.order === 'asc' ? 'desc' : 'asc';
-
-      if (!this.eventFunctions[fieldValue + orderValue]) {
-        this.eventFunctions[fieldValue + orderValue] = () => {
-          this.sort(fieldValue, orderValue);
-        };
-      }
-
-      if (this.eventFunctions[fieldValue + this.sorted.order]) {
-        elem.removeEventListener('pointerdown', this.eventFunctions[fieldValue + this.sorted.order]);
-      }
-
-      elem.addEventListener('pointerdown', this.eventFunctions[fieldValue + orderValue]);
-    });
+    document.addEventListener('pointerdown', this.onMouseClick);
   }
 
-  destroyEventListeners() {
-    if (this.element) {
-      const headers = this.element.querySelectorAll('[data-sortable="true"]');
-      headers.forEach((elem) => {
-        const fieldValue = elem.dataset.id;
-        elem.removeEventListener('pointerdown', this.eventFunctions[fieldValue]);
-      });
+  onMouseClick = event => {
+    const headerCell = event.target.closest('.sortable-table__cell');
 
-      this.eventFunctions = {};
+    if (headerCell) {
+      if (!headerCell.closest('.sortable-table__header')) {
+        return;
+      }
+      if (headerCell.dataset.sortable !== 'false') {
+        this.sorted.order = this.sorted.order === 'asc' ? 'desc' : 'asc' ;
+        this.sorted.id = headerCell.dataset.id;
+
+        this.sort(this.sorted.id, this.sorted.order);
+      }
     }
   }
 
@@ -143,21 +126,19 @@ export default class SortableTable {
     } else {
       this.sortOnServer();
     }
-
-    this.initEventListeners();
   }
 
   sortOnClient() {
-    const fieldValue = this.sorted.id;
-    const orderValue = this.sorted.order;
-    const fieldConfig = this.headerConfig.find(field => field.id === fieldValue);
-    this.data = sortObjects(this.data, fieldValue, fieldConfig.sortType, orderValue);
+    const {id, order} = this.sorted;
+
+    const fieldConfig = this.headerConfig.find(field => field.id === id);
+    this.data = sortObjects(this.data, id, fieldConfig.sortType, order);
     const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
     if (oldSortedField !== null) {
       const arrowElement = oldSortedField.lastElementChild;
       delete oldSortedField.dataset.order;
-      const newSortedField = this.subElements.header.querySelector(`[data-id="${fieldValue}"]`);
-      newSortedField.dataset.order = orderValue;
+      const newSortedField = this.subElements.header.querySelector(`[data-id="${id}"]`);
+      newSortedField.dataset.order = order;
       arrowElement.remove();
       newSortedField.append(arrowElement);
     }
@@ -172,9 +153,10 @@ export default class SortableTable {
   }
 
   destroy() {
-    this.destroyEventListeners();
+    document.removeEventListener('pointerdown', this.onMouseClick);
     this.remove();
     this.element = null;
+    this.subElements = {};
   }
 }
 

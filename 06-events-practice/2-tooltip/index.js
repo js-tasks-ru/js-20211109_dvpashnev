@@ -1,6 +1,7 @@
 class Tooltip {
   element;
   tooltip = '';
+  offset = 5;
   static instance;
 
   constructor() {
@@ -37,8 +38,8 @@ class Tooltip {
   }
 
   move(event) {
-    this.element.style.left = (event.pageX + 5) + 'px';
-    this.element.style.top = (event.pageY + 5) + 'px';
+    this.element.style.left = (event.pageX + this.offset) + 'px';
+    this.element.style.top = (event.pageY + this.offset) + 'px';
   }
 
   initEventListeners() {
