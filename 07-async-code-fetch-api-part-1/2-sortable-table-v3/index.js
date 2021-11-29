@@ -23,6 +23,7 @@ export default class SortableTable {
     this.isSortLocally = isSortLocally;
 
     this.render();
+    this.initEventListeners();
   }
 
   get template() {
@@ -42,15 +43,15 @@ export default class SortableTable {
   getTableHeader(fieldValue = this.sorted.id, orderValue = this.sorted.order) {
     return this.headerConfig
       .map(({id, title, sortable}) => {
-          const isSortedField = id === fieldValue;
-          return `<div class="sortable-table__cell"
+        const isSortedField = id === fieldValue;
+        return `<div class="sortable-table__cell"
           data-id="${id}"
           data-sortable="${sortable}"
           ${isSortedField ? 'data-order="' + orderValue + '"' : ''}>
           <span>${title}</span>
           ${isSortedField ? this.sortArrow : ''}
         </div>`;
-        }
+      }
       )
       .join('');
   }
@@ -88,9 +89,10 @@ export default class SortableTable {
 
     this.subElements = this.getSubElements(this.element);
 
+    document.body.append(this.element);
+
     await this.sort(this.sorted.id, this.sorted.order);
 
-    this.initEventListeners();
   }
 
   getSubElements(element) {
@@ -131,15 +133,13 @@ export default class SortableTable {
     this.sorted.order = orderValue;
 
     if (this.isSortLocally) {
-      await this.sortOnClient();
+      await this.sortOnClient(fieldValue, orderValue);
     } else {
       await this.sortOnServer(fieldValue, orderValue);
     }
   }
 
-  async sortOnClient() {
-    const {id, order} = this.sorted;
-
+  async sortOnClient(id, order) {
     const fieldConfig = this.headerConfig.find(field => field.id === id);
     this.data = sortObjects(this.data, id, fieldConfig.sortType, order);
     const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
