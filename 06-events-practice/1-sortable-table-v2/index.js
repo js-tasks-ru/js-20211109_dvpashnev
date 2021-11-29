@@ -115,7 +115,7 @@ export default class SortableTable {
         this.sort(this.sorted.id, this.sorted.order);
       }
     }
-  }
+  };
 
   sort(fieldValue, orderValue) {
     this.sorted.id = fieldValue;
