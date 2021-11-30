@@ -89,10 +89,9 @@ export default class SortableTable {
 
     this.subElements = this.getSubElements(this.element);
 
-    document.body.append(this.element);
-
     await this.sort(this.sorted.id, this.sorted.order);
 
+    document.body.append(this.element);
   }
 
   getSubElements(element) {
@@ -159,21 +158,19 @@ export default class SortableTable {
     this.sorted.id = id;
     this.sorted.order = order;
 
-    await fetchJson(this.urlTemplate(this.sorted))
-      .then(data => {
-        this.data = data;
-        const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
-        if (oldSortedField !== null) {
-          const arrowElement = oldSortedField.lastElementChild;
-          delete oldSortedField.dataset.order;
-          const newSortedField = this.subElements.header.querySelector(`[data-id="${id}"]`);
-          newSortedField.dataset.order = order;
-          arrowElement.remove();
-          newSortedField.append(arrowElement);
-        }
+    this.data = await fetchJson(this.urlTemplate(this.sorted));
 
-        this.subElements.body.innerHTML = this.tableRows;
-      });
+    const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
+    if (oldSortedField !== null) {
+      const arrowElement = oldSortedField.lastElementChild;
+      delete oldSortedField.dataset.order;
+      const newSortedField = this.subElements.header.querySelector(`[data-id="${id}"]`);
+      newSortedField.dataset.order = order;
+      arrowElement.remove();
+      newSortedField.append(arrowElement);
+    }
+
+    this.subElements.body.innerHTML = this.tableRows;
   }
 
   remove() {
