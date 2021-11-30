@@ -27,10 +27,10 @@ export default class ColumnChart {
     this.url = url;
     this.range = range;
 
-    this.urlTemplate = dates => BACKEND_URL + '/' + this.url + `?from=${dates.from.toISOString()}&to=${dates.to.toISOString()}`;
+    this.urlTemplate = dates => BACKEND_URL + '/' + this.url
+      + `?from=${dates.from.toISOString()}&to=${dates.to.toISOString()}`;
 
     this.render();
-    this.initEventListeners();
     this.update(this.range.from, this.range.to);
   }
 
@@ -91,29 +91,28 @@ export default class ColumnChart {
     this.range.from = start;
     this.range.to = end;
 
-    await fetchJson(this.urlTemplate(this.range))
-      .then(data => {
-        this.data = data;
-        this.subElements.body.innerHTML = this.renderColumns();
-        this.value = Object.values(this.data).reduce((sum, item) => sum + item, 0);
-        this.subElements.header.innerHTML = `${this.formatHeading !== null ? this.formatHeading(this.value) : this.value}`;
-        this.element.classList.remove('column-chart_loading');
-      });
+    this.data = await fetchJson(this.urlTemplate(this.range));
+    this.subElements.body.innerHTML = this.renderColumns();
+    this.value = Object.values(this.data).reduce((sum, item) => sum + item, 0);
+    this.subElements.header.innerHTML
+      = `${this.formatHeading !== null
+        ? this.formatHeading(this.value)
+        : this.value}`;
+    this.element.classList.remove('column-chart_loading');
 
     return this.data;
   }
 
-  getColumnProps(data) {
+  getColumnProps(data = {}) {
+    const maxValue = Math.max(...Object.values(data));
+    const scale = this.chartHeight / maxValue;
+
     return Object.entries(data).map(([key, value]) => {
       return {
         toolTip: `<div><small>${key}</small></div><strong>${value}</strong>`,
-        value: value
+        value: String(Math.floor(parseInt(value) * scale))
       };
     });
-  }
-
-  initEventListeners () {
-    // NOTE: в данном методе добавляем обработчики событий, если они есть
   }
 
   remove () {
@@ -122,6 +121,5 @@ export default class ColumnChart {
 
   destroy() {
     this.remove();
-    // NOTE: удаляем обработчики событий, если они есть
   }
 }
