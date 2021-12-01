@@ -35,8 +35,7 @@ export default class ColumnChart {
   }
 
   getTemplate() {
-    return `
-    <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
+    return `<div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
       <div class="column-chart__title">
         Total ${this.label}
         ${this.link ? `<a href="${this.link}" class="column-chart__link">View all</a>` : ``}

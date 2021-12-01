@@ -3,6 +3,29 @@ import fetchJson from './utils/fetch-json.js';
 const BACKEND_URL = 'https://course-js.javascript.ru';
 
 export default class SortableTable {
+  onMouseClick = async event => {
+    const headerCell = event.target.closest('.sortable-table__cell');
+
+    if (headerCell) {
+      if (!headerCell.closest('.sortable-table__header')) {
+        return;
+      }
+      if (headerCell.dataset.sortable !== 'false') {
+        this.sorted.order = this.sorted.order === 'asc' ? 'desc' : 'asc' ;
+        this.sorted.id = headerCell.dataset.id;
+
+        await this.sort(this.sorted.id, this.sorted.order);
+      }
+    }
+  };
+
+  onScrollEnd = async () => {
+    if (window.pageYOffset + 1 >= document.documentElement.scrollHeight - document.documentElement.clientHeight) {
+      this.loaded.end += this.loaded.step;
+      await this.loadNext();
+    }
+  };
+
   constructor(headerConfig, {
     data = [],
     sorted = {
@@ -11,16 +34,22 @@ export default class SortableTable {
     },
     url = '',
     isSortLocally = false,
+    loaded = {
+      start: 0,
+      end: 30,
+      step: 30,
+    },
   } = {}) {
     this.headerConfig = headerConfig;
     this.data = data;
     this.sorted = sorted;
     this.url = url;
-    this.urlTemplate = sortOptions => BACKEND_URL + '/'
+    this.urlTemplate = (sortOptions, loaded) => BACKEND_URL + '/'
       + this.url
-      + `?_sort=${sortOptions.id}&_order=${sortOptions.order}`;
+      + `?_sort=${sortOptions.id}&_order=${sortOptions.order}&_start=${loaded.start}&_end=${loaded.end}`;
 
     this.isSortLocally = isSortLocally;
+    this.loaded = loaded;
 
     this.render();
     this.initEventListeners();
@@ -62,8 +91,8 @@ export default class SortableTable {
             </span>`;
   }
 
-  get tableRows() {
-    return this.data
+  getTableRows(data) {
+    return data
       .map((row) => `<a href="/products/${row.id || '#'}" class="sortable-table__row">
                                 ${this.getFields(row)}
                               </a>`)
@@ -109,27 +138,14 @@ export default class SortableTable {
 
   initEventListeners() {
     document.addEventListener('pointerdown', this.onMouseClick);
+    document.addEventListener('scroll', this.onScrollEnd);
   }
-
-  onMouseClick = async event => {
-    const headerCell = event.target.closest('.sortable-table__cell');
-
-    if (headerCell) {
-      if (!headerCell.closest('.sortable-table__header')) {
-        return;
-      }
-      if (headerCell.dataset.sortable !== 'false') {
-        this.sorted.order = this.sorted.order === 'asc' ? 'desc' : 'asc' ;
-        this.sorted.id = headerCell.dataset.id;
-
-        await this.sort(this.sorted.id, this.sorted.order);
-      }
-    }
-  };
 
   async sort(fieldValue, orderValue) {
     this.sorted.id = fieldValue;
     this.sorted.order = orderValue;
+    this.loaded.start = 0;
+    this.loaded.end = this.loaded.step;
 
     if (this.isSortLocally) {
       await this.sortOnClient(fieldValue, orderValue);
@@ -151,14 +167,14 @@ export default class SortableTable {
       newSortedField.append(arrowElement);
     }
 
-    this.subElements.body.innerHTML = this.tableRows;
+    this.subElements.body.innerHTML = this.getTableRows(this.data);
   }
 
   async sortOnServer (id, order) {
     this.sorted.id = id;
     this.sorted.order = order;
 
-    this.data = await fetchJson(this.urlTemplate(this.sorted));
+    this.data = await fetchJson(this.urlTemplate(this.sorted, this.loaded));
 
     const oldSortedField = this.subElements.header.querySelector(`[data-order]`);
     if (oldSortedField !== null) {
@@ -170,7 +186,15 @@ export default class SortableTable {
       newSortedField.append(arrowElement);
     }
 
-    this.subElements.body.innerHTML = this.tableRows;
+    this.subElements.body.innerHTML = this.getTableRows(this.data);
+  }
+
+  async loadNext() {
+    this.loaded.start = this.loaded.end;
+    this.loaded.end += this.loaded.step;
+    const newData = await fetchJson(this.urlTemplate(this.sorted, this.loaded));
+    this.data = this.data.concat(newData);
+    this.subElements.body.innerHTML += this.getTableRows(newData);
   }
 
   remove() {
@@ -181,6 +205,7 @@ export default class SortableTable {
 
   destroy() {
     document.removeEventListener('pointerdown', this.onMouseClick);
+    document.removeEventListener('scroll', this.onScrollEnd);
     this.remove();
     this.element = null;
     this.subElements = {};
