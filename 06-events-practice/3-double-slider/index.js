@@ -25,7 +25,7 @@ export default class DoubleSlider {
 
   get selectedPercent() {
     return {
-      from: +(((this.selected.from - +this.min) / (this.max - +this.min)) * 100).toFixed(),
+      from: parseInt(((this.selected.from - this.min) / (this.max - this.min) * 100).toFixed()),
       to: 100 - (this.selected.to / this.max * 100).toFixed()
     };
   }
@@ -74,12 +74,13 @@ export default class DoubleSlider {
     this.element.addEventListener('pointermove', this.moveLeft);
 
     this.element.addEventListener('pointerup', () => {
+      const { from, to } = this.selected;
       this.element.dispatchEvent(new CustomEvent('range-select',
         {
           bubbles: true,
           detail: {
-            from: +this.selected.from,
-            to: +this.selected.to,
+            from: parseInt(from),
+            to: parseInt(to),
           }
         }));
       this.element.removeEventListener('pointermove', this.moveLeft);
@@ -91,12 +92,13 @@ export default class DoubleSlider {
     this.element.addEventListener('pointermove', this.moveRight);
 
     this.element.addEventListener('pointerup', () => {
+      const { from, to } = this.selected;
       this.element.dispatchEvent(new CustomEvent('range-select',
         {
           bubbles: true,
           detail: {
-            from: +this.selected.from,
-            to: +this.selected.to,
+            from: parseInt(from),
+            to: parseInt(to),
           }
         }));
       this.element.removeEventListener('pointermove', this.moveRight);
@@ -111,7 +113,7 @@ export default class DoubleSlider {
     if (nextLeft >= 0 && nextLeft <= progressWidth) {
       const nextLeftPart = progressWidth !== 0 ? nextLeft / progressWidth : nextLeft;
 
-      this.selected.from = (nextLeftPart * (this.max - this.min) + +this.min).toFixed();
+      this.selected.from = (nextLeftPart * (this.max - this.min) + this.min).toFixed();
       this.subElements.thumbLeft.style.left = this.selectedPercent.from + '%';
       this.subElements.progress.style.left = this.selectedPercent.from + '%';
       this.subElements.from.innerHTML = this.formatValue(this.selected.from);
