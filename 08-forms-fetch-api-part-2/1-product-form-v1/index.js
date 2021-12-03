@@ -5,11 +5,14 @@ const IMGUR_CLIENT_ID = '28aaa2e823b03b1';
 const BACKEND_URL = 'https://course-js.javascript.ru';
 
 export default class ProductForm {
-  CATEGORIES_N_SUBCATEGORIES_URL = BACKEND_URL + '/api/rest/categories?_sort=weight&_refs=subcategory';
-
+  product = {};
 
   constructor (productId) {
     this.productId = productId;
+
+    this.categories_n_subcategories_url = new URL(`api/rest/categories`, BACKEND_URL);
+
+    this.product_url = new URL(`api/rest/products`, BACKEND_URL);
   }
 
   load () {
