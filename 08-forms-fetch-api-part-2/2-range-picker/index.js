@@ -3,29 +3,41 @@ export default class RangePicker {
   subElements = {};
   cells = {};
 
-  onPointerDown = (e) => {
+  onClick = (e) => {
     const targetInput = e.target.closest('.rangepicker__input');
     const targetCell = e.target.closest('.rangepicker__cell');
+    const rightArrow = e.target.closest('.rangepicker__selector-control-right');
+    const leftArrow = e.target.closest('.rangepicker__selector-control-left');
     if (targetInput) {
-      this.renderSelector();
-      this.setRange();
+      if (this.subElements.selector.children.length === 0) {
+        this.renderSelector();
+      }
       if (this.element.classList.contains('rangepicker_open')) {
         this.element.classList.remove('rangepicker_open');
       } else {
         this.element.classList.add('rangepicker_open');
       }
+      if (!this.firstClick) {
+        this.firstSelectedCell.classList.remove('rangepicker__selected-from');
+        this.subElements.from.innerHTML = this.from.toLocaleDateString('ru-RU');
+        this.firstClick = true;
+      }
+      this.setRange();
     } else if (targetCell) {
-      if (this.to) {
+      if (this.firstClick) {
         this.clearRange();
 
-        targetCell.classList.add('rangepicker__selected-from');
-        this.cellFrom = targetCell;
-        this.from = new Date(targetCell.dataset.value);
-        this.subElements.from.innerHTML = this.from.toLocaleDateString('ru-RU');
-        this.to = null;
+        this.firstSelectedCell = targetCell;
+        this.firstSelectedCell.classList.add('rangepicker__selected-from');
+        //this.cellFrom = targetCell;
+        this.firstSelectedDate = new Date(targetCell.dataset.value);
+        this.subElements.from.innerHTML = this.firstSelectedDate.toLocaleDateString('ru-RU');
+        this.firstClick = false;
       } else {
-        this.to = new Date(targetCell.dataset.value);
-
+        const nextTo = new Date(targetCell.dataset.value);
+        this.from = this.firstSelectedDate;
+        this.to = nextTo;
+        this.cellFrom = this.firstSelectedCell;
         if (this.to < this.from) {
           const tmp = this.from;
           this.from = this.to;
@@ -41,15 +53,44 @@ export default class RangePicker {
           {
             bubbles: true,
           }));
+        this.firstClick = true;
       }
+    } else if (rightArrow) {
+      this.firstMonth = parseInt(this.firstMonth) + 1;
+      this.secondMonth = parseInt(this.secondMonth) + 1;
+      if (this.secondMonth > 11) {
+        this.secondMonth = 0;
+        this.secondYear = parseInt(this.secondYear) + 1;
+      }
+      if (this.firstMonth > 11) {
+        this.firstMonth = 0;
+        this.firstYear = parseInt(this.firstYear) + 1;
+      }
+      this.renderCalendars();
+    } else if (leftArrow) {
+      this.firstMonth = parseInt(this.firstMonth) - 1;
+      this.secondMonth = parseInt(this.secondMonth) - 1;
+      if (this.firstMonth < 0) {
+        this.firstMonth = 11;
+        this.firstYear = parseInt(this.firstYear) - 1;
+      }
+      if (this.secondMonth < 0) {
+        this.secondMonth = 11;
+        this.secondYear = parseInt(this.secondYear) - 1;
+      }
+      this.renderCalendars();
     } else {
+      if (!this.firstClick) {
+        this.firstSelectedCell.classList.remove('rangepicker__selected-from');
+        this.subElements.from.innerHTML = this.from.toLocaleDateString('ru-RU');
+        this.setRange();
+        this.firstClick = true;
+      }
+      this.firstMonth = this.from.getMonth();
+      this.secondMonth = this.to.getMonth();
       this.element.classList.remove('rangepicker_open');
     }
   };
-
-  /*onInputPointerDown = (e) => {
-    this.element.classList.add('rangepicker_open');
-  };*/
 
   constructor({
     from = new Date(to.getMonth() - 1 < 0 ? to.getFullYear() - 1 : to.getFullYear(), to.getMonth() - 1, to.getDate()),
@@ -63,7 +104,12 @@ export default class RangePicker {
 
     this.firstMonth = this.from.getMonth();
     this.secondMonth = this.to.getMonth();
-
+    this.firstYear = this.from.getFullYear();
+    this.secondYear = this.to.getFullYear();
+    this.firstSelectedDate = this.from;
+    this.secondSelectedDate = this.to;
+    this.firstSelectedCell = null;
+    this.firstClick = true;
     this.days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
     this.render();
@@ -75,8 +121,7 @@ export default class RangePicker {
       <span data-element="from">${this.from.toLocaleDateString('ru-RU')}</span> -
       <span data-element="to">${this.to.toLocaleDateString('ru-RU')}</span>
     </div>
-    <div class="rangepicker__selector" data-element="selector">
-    </div>
+    <div class="rangepicker__selector" data-element="selector"></div>
 </div>`;
   }
 
@@ -85,7 +130,6 @@ export default class RangePicker {
   }
 
   getMonth(year, month) {
-    //const date = new Date();
     let currentDate = new Date(year, month, 1, 0, -this.timeOffset);
     const firstDay = currentDate.getDay();
     const buttons = [];
@@ -110,38 +154,35 @@ export default class RangePicker {
       <div class="rangepicker__selector-arrow"></div>
       <div class="rangepicker__selector-control-left"></div>
       <div class="rangepicker__selector-control-right"></div>
-      <div class="rangepicker__calendar">
-        <div class="rangepicker__month-indicator">
-          <time datetime="${this.getMonthName(this.firstMonth, 'en')}">
-            ${this.getMonthName(this.firstMonth, 'ru')}
+      <div class="rangepicker__calendar"></div>
+      <div class="rangepicker__calendar"></div>`;
+  }
+
+  getCalendar(month, year) {
+    return `<div class="rangepicker__month-indicator">
+          <time datetime="${this.getMonthName(month, 'en')}">
+            ${this.getMonthName(month, 'ru')}
           </time>
         </div>
         <div class="rangepicker__day-of-week">
             ${this.days.map((day) => `<div>${day}</div>`).join('')}
         </div>
         <div class="rangepicker__date-grid">
-          ${this.getMonth(this.from.getFullYear(), this.firstMonth)}
-        </div>
-      </div>
-      <div class="rangepicker__calendar">
-        <div class="rangepicker__month-indicator">
-          <time datetime="${this.getMonthName(this.secondMonth, 'en')}">
-            ${this.getMonthName(this.secondMonth, 'ru')}
-          </time>
-        </div>
-        <div class="rangepicker__day-of-week">
-          ${this.days.map((day) => `<div>${day}</div>`).join('')}
-        </div>
-        <div class="rangepicker__date-grid">
-          ${this.getMonth(this.to.getFullYear(), this.secondMonth)}
-        </div>
-      </div>`;
+          ${this.getMonth(year, month)}
+        </div>`;
+  }
+
+  renderCalendars() {
+    this.calendars.first.innerHTML = this.getCalendar(this.firstMonth, this.firstYear);
+    this.calendars.second.innerHTML = this.getCalendar(this.secondMonth, this.secondYear);
+    this.cells = this.getCells(this.element);
+    this.setRange();
   }
 
   getMonthName(month, locale) {
     const date = new Date();
     date.setMonth(month);
-    return firstLetterCaps(date.toLocaleString(locale, {month: 'long'}));
+    return date.toLocaleString(locale, {month: 'long'});
   }
 
   render() {
@@ -164,12 +205,9 @@ export default class RangePicker {
     selector.innerHTML = this.getSelector();
 
     this.selector = selector.firstElementChild;*/
-
-
     this.subElements.selector.innerHTML = this.getSelector();
-    this.cells = this.getCells(this.element);
-
-    this.setRange();
+    this.calendars = this.getCalendars(this.element);
+    this.renderCalendars();
   }
 
   getSubElements(element) {
@@ -181,6 +219,16 @@ export default class RangePicker {
 
       result[name] = subElement;
     }
+
+    return result;
+  }
+
+  getCalendars(element) {
+    const result = {};
+    const elements = element.querySelectorAll('.rangepicker__calendar');
+
+    result['first'] = elements[0];
+    result['second'] = elements[1];
 
     return result;
   }
@@ -199,24 +247,18 @@ export default class RangePicker {
   }
 
   setRange() {
-    console.log(this.from.toISOString());
-
     if (!this.cellFrom) {
       this.cellFrom = this.element.querySelector(`[data-value='${this.from.toISOString()}']`);
     }
-    if (this.to) {
-      if (!this.cellTo) {
-        this.cellTo = this.element.querySelector(`[data-value='${this.to.toISOString()}']`);
-      }
-      console.log(this.cellFrom);
-      console.log(this.cellTo);
-      this.cellFrom.classList.add('rangepicker__selected-from');
-      this.cellTo.classList.add('rangepicker__selected-to');
-      for (const cell of Object.values(this.cells)) {
-        if (Date.parse(cell.dataset.value) > this.from
-          && Date.parse(cell.dataset.value) < this.to) {
-          cell.classList.add('rangepicker__selected-between');
-        }
+    if (!this.cellTo) {
+      this.cellTo = this.element.querySelector(`[data-value='${this.to.toISOString()}']`);
+    }
+    this.cellFrom.classList.add('rangepicker__selected-from');
+    this.cellTo.classList.add('rangepicker__selected-to');
+    for (const cell of Object.values(this.cells)) {
+      if (+Date.parse(cell.dataset.value) > +this.from
+        && +Date.parse(cell.dataset.value) < +this.to) {
+        cell.classList.add('rangepicker__selected-between');
       }
     }
   }
@@ -233,19 +275,15 @@ export default class RangePicker {
   }
 
   initEventListeners() {
-    document.addEventListener('pointerdown', this.onPointerDown);
+    document.addEventListener('click', this.onClick, true);
     //this.subElements.input.addEventListener('pointerdown', this.onInputPointerDown);
   }
 
-  remove () {
+  remove() {
     this.element.remove();
   }
 
   destroy() {
     this.remove();
   }
-}
-
-function firstLetterCaps(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
 }
