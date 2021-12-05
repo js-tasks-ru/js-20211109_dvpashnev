@@ -5,6 +5,7 @@ const IMGUR_CLIENT_ID = '28aaa2e823b03b1';
 const BACKEND_URL = 'https://course-js.javascript.ru';
 
 export default class ProductForm {
+  element;
   product = {};
   categoriesNSubcategories = [];
   subElements = {};
@@ -49,39 +50,7 @@ export default class ProductForm {
   onSubmit = async (event) => {
     event.preventDefault();
 
-    let images = [];
-    for (const elem of this.subElements.imageListContainer.firstElementChild.children) {
-      const inputs = elem.querySelectorAll('input');
-
-      if (inputs.length > 0) {
-        images.push({url: inputs[0].value, source: inputs[1].value});
-      }
-    }
-
-    for (const [field, element] of Object.entries(this.fields)) {
-      this.product[field]
-        = element.type === 'number' || field === 'status'
-          ? parseInt(element.value)
-          : escapeHtml(element.value);
-    }
-
-    this.product.images = images;
-
-    try {
-      const response = await fetch(new URL(`api/rest/products`, BACKEND_URL), {
-        method: this.product.id ? "PATCH" : "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(this.product),
-        referrer: ''
-      });
-
-      alert('Товар сохранён');
-      return await response.json();
-    } catch (error) {
-      return Promise.reject(error);
-    }
+    await this.save();
   }
 
   constructor(productId) {
@@ -89,6 +58,7 @@ export default class ProductForm {
 
     this.categoriesNSubcategoriesUrl = new URL(`api/rest/categories`, BACKEND_URL);
     this.productUrl = new URL(`api/rest/products`, BACKEND_URL);
+    this.productUrlWithId = new URL(`api/rest/products`, BACKEND_URL);
   }
 
   async loadCategoriesNSubcategories() {
@@ -163,14 +133,14 @@ export default class ProductForm {
       <div class="form-group form-group__half_left">
         <fieldset>
           <label class="form-label">Название товара</label>
-          <input required="" type="text" name="title"
+          <input required="" type="text" name="title" id="title"
           class="form-control" placeholder="Название товара"
           value="${this.product.title ? escapeHtml(this.product.title) : ''}" />
         </fieldset>
       </div>
       <div class="form-group form-group__wide">
         <label class="form-label">Описание</label>
-        <textarea required="" class="form-control" name="description"
+        <textarea required="" class="form-control" name="description" id="description"
           data-element="productDescription" placeholder="Описание товара">${this.product.description ? escapeHtml(this.product.description) : ''}</textarea>
       </div>
       <div class="form-group form-group__wide" data-element="sortable-list-container">
@@ -186,30 +156,30 @@ export default class ProductForm {
       </div>
       <div class="form-group form-group__half_left">
         <label class="form-label">Категория</label>
-        <select class="form-control" name="subcategory">
+        <select class="form-control" name="subcategory" id="subcategory">
           ${this.getCategoriesOptions(this.categoriesNSubcategories)}
         </select>
       </div>
       <div class="form-group form-group__half_left form-group__two-col">
         <fieldset>
           <label class="form-label">Цена ($)</label>
-          <input required="" type="number" name="price" class="form-control" placeholder="100"
+          <input required="" type="number" name="price" id="price" class="form-control" placeholder="100"
           value="${this.product.price ? this.product.price : ''}">
         </fieldset>
         <fieldset>
           <label class="form-label">Скидка ($)</label>
-          <input required="" type="number" name="discount" class="form-control" placeholder="0"
+          <input required="" type="number" name="discount" id="discount" class="form-control" placeholder="0"
           value="${this.product.discount ? this.product.discount : ''}">
         </fieldset>
       </div>
       <div class="form-group form-group__part-half">
         <label class="form-label">Количество</label>
-        <input required="" type="number" class="form-control" name="quantity" placeholder="1"
+        <input required="" type="number" class="form-control" name="quantity" id="quantity" placeholder="1"
           value="${this.product.quantity ? this.product.quantity : ''}">
       </div>
       <div class="form-group form-group__part-half">
         <label class="form-label">Статус</label>
-        <select class="form-control" name="status">
+        <select class="form-control" name="status" id="status">
           <option value="1" ${this.product.status === '1' ? 'selected' : ''}>Активен</option>
           <option value="0" ${this.product.status === '0' ? 'selected' : ''}>Неактивен</option>
         </select>
@@ -226,9 +196,9 @@ export default class ProductForm {
     await this.loadCategoriesNSubcategories();
 
     if (this.productId) {
-      this.productUrl.searchParams.set('id', this.productId);
+      this.productUrlWithId.searchParams.set('id', this.productId);
 
-      this.product = (await fetchJson(this.productUrl))[0];
+      this.product = (await fetchJson(this.productUrlWithId))[0];
     }
 
     const element = document.createElement('div');
@@ -241,7 +211,7 @@ export default class ProductForm {
     this.fields = this.getFields(this.element);
 
     this.initEventListeners();
-    //document.body.append(this.element);
+    document.body.append(this.element);
   }
 
   getSubElements(element) {
@@ -264,15 +234,10 @@ export default class ProductForm {
 
   getFields(element) {
     const result = {};
-    const fields = element.querySelectorAll('[name]');
+    const fields = element.querySelectorAll('[id]');
 
     for (const field of fields) {
-      if (field.name !== 'save'
-        && field.name !== 'uploadImage'
-        && field.name !== 'url'
-        && field.name !== 'source' ) {
-        result[field.name] = field;
-      }
+      result[field.id] = field;
     }
 
     return result;
@@ -282,5 +247,55 @@ export default class ProductForm {
     this.subElements.uploadImage.addEventListener('click', this.onImageInputClick);
     this.element.addEventListener('pointerdown', this.onImageDeleteClick);
     this.element.addEventListener('submit', this.onSubmit);
+  }
+
+  async save() {
+    let images = [];
+    for (const elem of this.subElements.imageListContainer.firstElementChild.children) {
+      const inputs = elem.querySelectorAll('input');
+
+      if (inputs.length > 0) {
+        images.push({url: inputs[0].value, source: inputs[1].value});
+      }
+    }
+
+    for (const [field, element] of Object.entries(this.fields)) {
+      this.product[field]
+        = element.type === 'number' || field === 'status'
+          ? parseInt(element.value)
+          : escapeHtml(element.value);
+    }
+
+    this.product.images = images;
+
+    try {
+      const response = await fetch(this.productUrl.toString(), {
+        method: this.product.id ? "PATCH" : "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(this.product),
+        referrer: ''
+      });
+
+      alert('Товар сохранён');
+
+      this.element.dispatchEvent(new CustomEvent(this.product.id ? 'product-updated' : 'product-saved',
+        {
+          bubbles: true,
+        }));
+
+      return await response.json();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+
+  remove () {
+    this.element.remove();
+  }
+
+  destroy() {
+    this.remove();
   }
 }
