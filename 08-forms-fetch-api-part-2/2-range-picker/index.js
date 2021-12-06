@@ -1,15 +1,16 @@
+const LAST_MONTH_NUMBER = 11;
+const FIRST_MONTH_NUMBER = 0;
+
 export default class RangePicker {
   element;
   subElements = {};
   cells = {};
+  inputSubElements = {};
 
-  onClick = (e) => {
-    const targetInput = e.target.closest('.rangepicker__input');
-    const targetCell = e.target.closest('.rangepicker__cell');
-    const rightArrow = e.target.closest('.rangepicker__selector-control-right');
-    const leftArrow = e.target.closest('.rangepicker__selector-control-left');
+  onInputClick = (e) => {
+    const targetInput = this.inputSubElements.hasOwnProperty(e.target.dataset.element);
     if (targetInput) {
-      if (this.subElements.selector.children.length === 0) {
+      if (!this.subElements.selector.children.length) {
         this.renderSelector();
       }
       if (this.element.classList.contains('rangepicker_open')) {
@@ -23,18 +24,22 @@ export default class RangePicker {
         this.firstClick = true;
       }
       this.setRange();
-    } else if (targetCell) {
+    }
+  };
+
+  onCellClick = (e) => {
+    const targetCell = this.cells.hasOwnProperty(e.target.dataset.value);
+    if (targetCell) {
       if (this.firstClick) {
         this.clearRange();
 
-        this.firstSelectedCell = targetCell;
+        this.firstSelectedCell = e.target;
         this.firstSelectedCell.classList.add('rangepicker__selected-from');
-        //this.cellFrom = targetCell;
-        this.firstSelectedDate = new Date(targetCell.dataset.value);
+        this.firstSelectedDate = new Date(this.firstSelectedCell.dataset.value);
         this.subElements.from.innerHTML = this.firstSelectedDate.toLocaleDateString('ru-RU');
         this.firstClick = false;
       } else {
-        const nextTo = new Date(targetCell.dataset.value);
+        const nextTo = new Date(e.target.dataset.value);
         this.from = this.firstSelectedDate;
         this.to = nextTo;
         this.cellFrom = this.firstSelectedCell;
@@ -43,7 +48,7 @@ export default class RangePicker {
           this.from = this.to;
           this.to = tmp;
         }
-        this.cellTo = targetCell;
+        this.cellTo = e.target;
         this.subElements.from.innerHTML = this.from.toLocaleDateString('ru-RU');
         this.subElements.to.innerHTML = this.to.toLocaleDateString('ru-RU');
 
@@ -55,31 +60,45 @@ export default class RangePicker {
           }));
         this.firstClick = true;
       }
-    } else if (rightArrow) {
+    }
+  };
+
+  onArrowClick = (e) => {
+    const rightArrow = e.target === this.subElements.rightArrow;
+    const leftArrow = e.target === this.subElements.leftArrow;
+    if (rightArrow) {
       this.firstMonth = parseInt(this.firstMonth) + 1;
       this.secondMonth = parseInt(this.secondMonth) + 1;
-      if (this.secondMonth > 11) {
-        this.secondMonth = 0;
+      if (this.secondMonth > LAST_MONTH_NUMBER) {
+        this.secondMonth = FIRST_MONTH_NUMBER;
         this.secondYear = parseInt(this.secondYear) + 1;
       }
-      if (this.firstMonth > 11) {
-        this.firstMonth = 0;
+      if (this.firstMonth > LAST_MONTH_NUMBER) {
+        this.firstMonth = FIRST_MONTH_NUMBER;
         this.firstYear = parseInt(this.firstYear) + 1;
       }
       this.renderCalendars();
     } else if (leftArrow) {
       this.firstMonth = parseInt(this.firstMonth) - 1;
       this.secondMonth = parseInt(this.secondMonth) - 1;
-      if (this.firstMonth < 0) {
-        this.firstMonth = 11;
+      if (this.firstMonth < FIRST_MONTH_NUMBER) {
+        this.firstMonth = LAST_MONTH_NUMBER;
         this.firstYear = parseInt(this.firstYear) - 1;
       }
-      if (this.secondMonth < 0) {
-        this.secondMonth = 11;
+      if (this.secondMonth < FIRST_MONTH_NUMBER) {
+        this.secondMonth = LAST_MONTH_NUMBER;
         this.secondYear = parseInt(this.secondYear) - 1;
       }
       this.renderCalendars();
-    } else {
+    }
+  };
+
+  onOtherClick = (e) => {
+    const targetInput = this.inputSubElements.hasOwnProperty(e.target.dataset.element);
+    const targetCell = this.cells.hasOwnProperty(e.target.dataset.value);
+    const rightArrow = e.target === this.subElements.rightArrow;
+    const leftArrow = e.target === this.subElements.leftArrow;
+    if (!targetInput && !targetCell && !rightArrow && !leftArrow) {
       if (!this.firstClick) {
         this.firstSelectedCell.classList.remove('rangepicker__selected-from');
         this.subElements.from.innerHTML = this.from.toLocaleDateString('ru-RU');
@@ -93,7 +112,9 @@ export default class RangePicker {
   };
 
   constructor({
-    from = new Date(to.getMonth() - 1 < 0 ? to.getFullYear() - 1 : to.getFullYear(), to.getMonth() - 1, to.getDate()),
+    from = new Date(to.getMonth() - 1 < 0
+      ? to.getFullYear() - 1
+      : to.getFullYear(), to.getMonth() - 1, to.getDate()),
     to = new Date()
   }) {
     this.from = from;
@@ -110,7 +131,13 @@ export default class RangePicker {
     this.secondSelectedDate = this.to;
     this.firstSelectedCell = null;
     this.firstClick = true;
-    this.days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+    this.days = [];
+    const today = new Date();
+    let firstWeekDay = ((today.getDate() - today.getDay()) + 1);
+    for (let d = 0; d < 7; d++) {
+      this.days.push(new Date(today.setDate(firstWeekDay++)).toLocaleString('ru', {weekday: "short"}));
+    }
 
     this.render();
   }
@@ -200,13 +227,12 @@ export default class RangePicker {
   }
 
   renderSelector() {
-    /*const selector = document.createElement('div');
-
-    selector.innerHTML = this.getSelector();
-
-    this.selector = selector.firstElementChild;*/
     this.subElements.selector.innerHTML = this.getSelector();
     this.calendars = this.getCalendars(this.element);
+
+    this.subElements.rightArrow = this.subElements.selector.querySelector('.rangepicker__selector-control-right');
+    this.subElements.leftArrow = this.subElements.selector.querySelector('.rangepicker__selector-control-left');
+
     this.renderCalendars();
   }
 
@@ -218,6 +244,15 @@ export default class RangePicker {
       const name = subElement.dataset.element;
 
       result[name] = subElement;
+
+      if (name === 'input') {
+        this.inputSubElements[name] = subElement;
+        const inputElements = subElement.querySelectorAll('[data-element]');
+
+        for (const inputElement of inputElements) {
+          this.inputSubElements[inputElement.dataset.element] = inputElement;
+        }
+      }
     }
 
     return result;
@@ -227,8 +262,8 @@ export default class RangePicker {
     const result = {};
     const elements = element.querySelectorAll('.rangepicker__calendar');
 
-    result['first'] = elements[0];
-    result['second'] = elements[1];
+    result.first = elements[0];
+    result.second = elements[1];
 
     return result;
   }
@@ -256,8 +291,8 @@ export default class RangePicker {
     this.cellFrom.classList.add('rangepicker__selected-from');
     this.cellTo.classList.add('rangepicker__selected-to');
     for (const cell of Object.values(this.cells)) {
-      if (+Date.parse(cell.dataset.value) > +this.from
-        && +Date.parse(cell.dataset.value) < +this.to) {
+      if (Date.parse(cell.dataset.value) > this.from.getTime()
+        && Date.parse(cell.dataset.value) < this.to.getTime()) {
         cell.classList.add('rangepicker__selected-between');
       }
     }
@@ -275,8 +310,10 @@ export default class RangePicker {
   }
 
   initEventListeners() {
-    document.addEventListener('click', this.onClick, true);
-    //this.subElements.input.addEventListener('pointerdown', this.onInputPointerDown);
+    document.addEventListener('click', this.onOtherClick, true);
+    document.addEventListener('click', this.onInputClick);
+    document.addEventListener('click', this.onArrowClick);
+    document.addEventListener('click', this.onCellClick);
   }
 
   remove() {
@@ -285,5 +322,10 @@ export default class RangePicker {
 
   destroy() {
     this.remove();
+    document.removeEventListener('click', this.onOtherClick, true);
+    document.removeEventListener('click', this.onInputClick);
+    document.removeEventListener('click', this.onArrowClick);
+    document.removeEventListener('click', this.onCellClick);
   }
 }
+

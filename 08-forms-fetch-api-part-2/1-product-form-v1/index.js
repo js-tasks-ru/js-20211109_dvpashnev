@@ -26,7 +26,6 @@ export default class ProductForm {
 
     this.subElements.fileInput = fileInput;
 
-    //document.body.appendChild(fileInput);
     fileInput.click();
   };
 
@@ -36,14 +35,11 @@ export default class ProductForm {
       const [file] = this.subElements.fileInput.files;
       const result = await this.upload(file);
 
-      alert('Изображение загружено');
       this.addImage(this.renderImage(result.data.link, file.name));
     } catch (error) {
-      alert('Ошибка загрузки изображения');
       console.error(error);
     } finally {
       this.subElements.uploadImage.classList.remove('is-loading');
-      alert('Готово!');
     }
   };
 
@@ -64,9 +60,7 @@ export default class ProductForm {
   async loadCategoriesNSubcategories() {
     this.categoriesNSubcategoriesUrl.searchParams.set('_sort', 'weight');
     this.categoriesNSubcategoriesUrl.searchParams.set('_refs', 'subcategory');
-    this.categoriesNSubcategories = await fetchJson(this.categoriesNSubcategoriesUrl);
-
-    return this.categoriesNSubcategories;
+    return fetchJson(this.categoriesNSubcategoriesUrl);
   }
 
   getCategoriesOptions(data) {
@@ -98,8 +92,9 @@ export default class ProductForm {
     }
   }
 
-  getImageList(images) {
-    return images ? images
+  getImageList(images = []) {
+    return images.length
+      ? images
       .map(image => this.renderImage(image.url, image.source))
       .join('') : '';
   }
@@ -193,13 +188,15 @@ export default class ProductForm {
   }
 
   async render() {
-    await this.loadCategoriesNSubcategories();
+    const categoriesNSubcategoriesPromise = this.loadCategoriesNSubcategories();
 
     if (this.productId) {
       this.productUrlWithId.searchParams.set('id', this.productId);
 
       this.product = (await fetchJson(this.productUrlWithId))[0];
     }
+
+    this.categoriesNSubcategories = await categoriesNSubcategoriesPromise;
 
     const element = document.createElement('div');
 
@@ -250,14 +247,15 @@ export default class ProductForm {
   }
 
   async save() {
-    let images = [];
-    for (const elem of this.subElements.imageListContainer.firstElementChild.children) {
-      const inputs = elem.querySelectorAll('input');
+    const images = [];
+    Object.entries(this.subElements.imageListContainer.firstElementChild.children)
+      .map((elem) => {
+        const inputs = elem[1].querySelectorAll('input');
 
-      if (inputs.length > 0) {
-        images.push({url: inputs[0].value, source: inputs[1].value});
-      }
-    }
+        if (inputs.length) {
+          images.push({url: inputs[0].value, source: inputs[1].value});
+        }
+      });
 
     for (const [field, element] of Object.entries(this.fields)) {
       this.product[field]
@@ -277,8 +275,6 @@ export default class ProductForm {
         body: JSON.stringify(this.product),
         referrer: ''
       });
-
-      alert('Товар сохранён');
 
       this.element.dispatchEvent(new CustomEvent(this.product.id ? 'product-updated' : 'product-saved',
         {
