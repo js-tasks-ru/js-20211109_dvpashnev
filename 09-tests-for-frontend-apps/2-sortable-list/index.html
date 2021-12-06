@@ -13,10 +13,10 @@
   const sortableList = new SortableList({
     items: data.map(item => {
       const element = document.createElement('li');
-
+      element.id = 'item' + item;
       element.innerHTML = `
         <span data-grab-handle>drag me!</span>
-        <span data-delete-handle>${item} delete me!</spa>
+        <span data-delete-handle>${item} delete me!</span>
       `
 
       return element;
