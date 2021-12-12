@@ -6,6 +6,7 @@ import header from './bestsellers-header.js';
 import fetchJson from './utils/fetch-json.js';
 
 const BACKEND_URL = 'https://course-js.javascript.ru/';
+const MONTH_IN_MS = 30 * 24 * 60 * 60 * 1000;
 
 export default class Page {
   element;
@@ -19,30 +20,27 @@ export default class Page {
     const ordersPromise = this.ordersColumnChart.update(from, to);
     const salesPromise = this.salesColumnChart.update(from, to);
     const customersPromise = this.customersColumnChart.update(from, to);
-    this.bestsellerTable.url.searchParams.set('from', from.toISOString());
-    this.bestsellerTable.url.searchParams.set('to', to.toISOString());
+    this.sortableTable.url.searchParams.set('from', from.toISOString());
+    this.sortableTable.url.searchParams.set('to', to.toISOString());
 
 
-    const bestsellerPromise = this.bestsellerTable.loadData(this.bestsellerTable.sorted.id,
-      this.bestsellerTable.sorted.order,
-      this.bestsellerTable.start,
-      this.bestsellerTable.end);
+    const bestsellerPromise = this.sortableTable.sortOnServer(this.sortableTable.sorted.id,
+      this.sortableTable.sorted.order,
+      1,
+      this.sortableTable.step + 1);
 
-    const [, , , bestsellers] = await Promise.all([ordersPromise, salesPromise, customersPromise, bestsellerPromise]);
-
-    this.bestsellerTable.renderRows(bestsellers);
+    await Promise.all([ordersPromise, salesPromise, customersPromise, bestsellerPromise]);
   };
 
   constructor() {
     const today = new Date();
-    today.setHours(today.getHours() + 3);
+    this.timeOffset = today.getTimezoneOffset();
+    today.setMinutes(today.getMinutes() + this.timeOffset);
     this.rangePicker = new RangePicker({
-      from: new Date(today.getMonth() - 1 < 0
-        ? today.getFullYear() - 1
-        : today.getFullYear(), today.getMonth() - 1,
-      today.getDate(), today.getHours(), today.getMinutes()),
+      from: new Date(today.getTime() - MONTH_IN_MS),
       to: today
     });
+
 
     this.ordersColumnChart = new ColumnChart({
       label: 'Заказы',
@@ -75,7 +73,7 @@ export default class Page {
       }
     });
 
-    this.bestsellerTable = new SortableTable(header, {
+    this.sortableTable = new SortableTable(header, {
       url: 'api/dashboard/bestsellers'
         + '?from=' + this.rangePicker.selected.from.toISOString()
         + '&to=' + this.rangePicker.selected.to.toISOString(),
@@ -104,22 +102,18 @@ export default class Page {
     this.subElements.topPanel = element.querySelector('.content__top-panel');
 
     this.subElements.topPanel.append(this.rangePicker.element);
-
     this.subElements.rangePicker = element.querySelector('.rangepicker');
 
     this.subElements.charts = element.querySelector('.dashboard__charts');
 
     this.subElements.charts.append(this.ordersColumnChart.element);
-
     this.subElements.charts.append(this.salesColumnChart.element);
-
     this.subElements.charts.append(this.customersColumnChart.element);
-
     this.subElements.ordersChart = element.querySelector('.dashboard__chart_orders');
     this.subElements.salesChart = element.querySelector('.dashboard__chart_sales');
     this.subElements.customersChart = element.querySelector('.dashboard__chart_customers');
 
-    this.element.append(this.bestsellerTable.element);
+    this.element.append(this.sortableTable.element);
     this.subElements.sortableTable = element.querySelector('.sortable-table');
 
     this.initEventListeners();
@@ -138,6 +132,12 @@ export default class Page {
   }
 
   destroy() {
+    this.rangePicker.destroy();
+    this.ordersColumnChart.destroy();
+    this.salesColumnChart.destroy();
+    this.customersColumnChart.destroy();
+    this.sortableTable.destroy();
+
     this.remove();
     this.element = null;
   }
