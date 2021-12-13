@@ -6,6 +6,7 @@ export default class ColumnChart {
   element;
   subElements = {};
   chartHeight = 50;
+  englishLabel = '';
 
   constructor({
     label = '',
@@ -18,6 +19,7 @@ export default class ColumnChart {
     }
   } = {}) {
     this.url = new URL(url, BACKEND_URL);
+    this.englishLabel = url.toString().split('/')[2];
     this.range = range;
     this.label = label;
     this.link = link;
@@ -84,14 +86,14 @@ export default class ColumnChart {
   }
 
   getLink() {
-    return this.link ? `<a class="column-chart__link" href="${this.link}">View all</a>` : '';
+    return this.link ? `<a class="column-chart__link" href="${this.link}">Подробнее</a>` : '';
   }
 
   get template() {
     return `
-      <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
+      <div class="column-chart ${'dashboard__chart_' + this.englishLabel} column-chart_loading" style="--chart-height: ${this.chartHeight}">
         <div class="column-chart__title">
-          Total ${this.label}
+          ${this.label}
           ${this.getLink()}
         </div>
         <div class="column-chart__container">

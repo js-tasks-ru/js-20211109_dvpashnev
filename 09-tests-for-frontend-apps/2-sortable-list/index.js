@@ -1,89 +1,108 @@
 export default class SortableList {
   items;
   subElements = {};
+  droppableBelow = null;
+  movingElement = null;
+  placeHolder = null;
+  boundingClientRect = {};
+  shiftX = 0;
+  shiftY = 0;
 
   onPointerDown = event => {
     if (event.target.dataset.grabHandle === '') {
-      const li = event.target.closest('.sortable-list__item')
-          ?? event.target.parentElement.closest('.sortable-list__item');
+      this.movingElement = event.target.closest('.sortable-list__item')
+          || event.target.parentElement.closest('.sortable-list__item');
 
-      console.log(li);
-      console.log(event.target);
-      if (!li) {
+      if (!this.movingElement) {
         return false;
       }
 
-      let droppableBelow = null;
-      const liBoundingClientRect = li.getBoundingClientRect();
+      this.boundingClientRect = this.movingElement.getBoundingClientRect();
 
-      let placeHolder = document.createElement('div');
-      placeHolder.className = 'sortable-list__placeholder';
-      placeHolder.style.width = liBoundingClientRect.width + 'px';
-      placeHolder.style.height = liBoundingClientRect.height + 'px';
-      placeHolder.style.top = liBoundingClientRect.top + 'px';
-      placeHolder.style.left = liBoundingClientRect.left + 'px';
-      li.before(placeHolder);
+      this.createPlaceHolder(this.boundingClientRect);
+      this.movingElement.before(this.placeHolder);
 
-      const shiftX = event.clientX - liBoundingClientRect.left;
-      const shiftY = event.clientY - liBoundingClientRect.top;
-      const width = liBoundingClientRect.width;
-      li.classList.add('sortable-list__item_dragging');
-      li.style.width = width + 'px';
-      this.element.append(li);
+      this.shiftX = event.clientX - this.boundingClientRect.left;
+      this.shiftY = event.clientY - this.boundingClientRect.top;
+      const width = this.boundingClientRect.width;
+      this.movingElement.classList.add('sortable-list__item_dragging');
+      this.movingElement.style.width = width + 'px';
+      this.element.append(this.movingElement);
 
-      moveAt(event.clientX, event.clientY);
+      this.moveAt(event.clientX, event.clientY);
 
-      function moveAt(pageX, pageY) {
-        li.style.left = pageX - shiftX + 'px';
-        li.style.top = pageY - shiftY + 'px';
-      }
-
-      function onPointerMove(event) {
-        moveAt(event.clientX, event.clientY);
-        li.style.display = 'none';
-        let elemBelow = document.elementFromPoint(event.clientX, event.clientY);
-        li.style.display = 'flex';
-
-        if (!elemBelow) {
-          return;
-        }
-
-        droppableBelow = elemBelow.closest('.sortable-list__item');
-        if (droppableBelow) {
-          enterDroppable(droppableBelow);
-        }
-      }
-
-      document.addEventListener('pointermove', onPointerMove);
-
-      document.onpointerup = function (event) {
-        document.removeEventListener('pointermove', onPointerMove);
-        document.onpointerup = null;
-        if (placeHolder) {
-          placeHolder.before(li);
-          li.classList.remove('sortable-list__item_dragging');
-          li.style = '';
-
-          placeHolder.remove();
-          placeHolder = null;
-        }
-      };
-
-      function enterDroppable(elem) {
-        if (elem.getBoundingClientRect().top > placeHolder.getBoundingClientRect().top) {
-          elem.after(placeHolder);
-        } else {
-          elem.before(placeHolder);
-        }
-      }
+      this.addEvents();
     }
   }
 
-  onItemDeleteClick = (e) => {
-    if (e.target.dataset.deleteHandle === '') {
-      const li = e.target.closest('li');
-      if (li) {
-        li.remove();
+  addEvents = () => {
+    document.addEventListener('pointermove', this.onPointerMove);
+    document.addEventListener('pointerup', this.onPointerUp);
+  }
+
+  removeEvents = () => {
+    document.removeEventListener('pointermove', this.onPointerMove);
+    document.removeEventListener('pointerup', this.onPointerUp);
+  }
+
+  createPlaceHolder = boundingClientRect => {
+    this.placeHolder = document.createElement('div');
+    this.placeHolder.className = 'sortable-list__placeholder';
+    this.placeHolder.style.width = boundingClientRect.width + 'px';
+    this.placeHolder.style.height = boundingClientRect.height + 'px';
+    this.placeHolder.style.top = boundingClientRect.top + 'px';
+    this.placeHolder.style.left = boundingClientRect.left + 'px';
+    return this.placeHolder;
+  }
+
+  moveAt = (pageX, pageY) => {
+    this.movingElement.style.left = pageX - this.shiftX + 'px';
+    this.movingElement.style.top = pageY - this.shiftY + 'px';
+  };
+
+  onPointerMove = event => {
+    this.moveAt(event.clientX, event.clientY);
+
+    this.movingElement.style.display = 'none';
+    let elemBelow = document.elementFromPoint(event.clientX, event.clientY);
+    this.movingElement.style.display = 'flex';
+
+    if (!elemBelow) {
+      return;
+    }
+
+    this.droppableBelow = elemBelow.closest('.sortable-list__item');
+    if (this.droppableBelow) {
+      this.enterDroppable(this.droppableBelow);
+    }
+  };
+
+  onPointerUp = () => {
+    this.removeEvents();
+    if (this.placeHolder) {
+      this.placeHolder.before(this.movingElement);
+      this.movingElement.classList.remove('sortable-list__item_dragging');
+      this.movingElement.style = '';
+
+      this.placeHolder.remove();
+      this.placeHolder = null;
+    }
+  };
+
+  enterDroppable = elem => {
+    if (elem.getBoundingClientRect().top > this.placeHolder.getBoundingClientRect().top) {
+      elem.after(this.placeHolder);
+    } else {
+      elem.before(this.placeHolder);
+    }
+  };
+
+  onItemDeleteClick = event => {
+    if (event.target.dataset.deleteHandle === '') {
+      const deletingElement = event.target.closest('li')
+        || event.target.parentElement.closest('.li');
+      if (deletingElement) {
+        deletingElement.remove();
       }
     }
   };
@@ -97,9 +116,9 @@ export default class SortableList {
   }
 
   get template() {
-    return `${this.items.map(li => {
-      li.classList.add('sortable-list__item');
-      return li.outerHTML;
+    return `${this.items.map(elem => {
+      elem.classList.add('sortable-list__item');
+      return elem.outerHTML;
     }).join('')}`;
   }
 

@@ -60,7 +60,6 @@ export default class ProductForm {
 
     this.categoriesNSubcategoriesUrl = new URL(`api/rest/categories`, BACKEND_URL);
     this.productUrl = new URL(`api/rest/products`, BACKEND_URL);
-    this.productUrlWithId = new URL(`api/rest/products`, BACKEND_URL);
   }
 
   async loadCategoriesNSubcategories() {
@@ -185,11 +184,13 @@ export default class ProductForm {
 
   async render() {
     const categoriesNSubcategoriesPromise = this.loadCategoriesNSubcategories();
-    this.productUrlWithId.searchParams.set('id', this.productId);
+    this.productUrl.searchParams.set('id', this.productId);
 
-    const productPromise = this.productId ? fetchJson(this.productUrlWithId) : [this.defaultFormData];
+    const productPromise = this.productId ? fetchJson(this.productUrl) : [this.defaultFormData];
+    this.productUrl.searchParams.delete('id');
 
-    const [categoriesNSubcategories, product] = await Promise.all([categoriesNSubcategoriesPromise, productPromise]);
+    const [categoriesNSubcategories, product]
+      = await Promise.all([categoriesNSubcategoriesPromise, productPromise]);
     [this.product] = product;
     this.categoriesNSubcategories = categoriesNSubcategories;
     const element = document.createElement('div');
